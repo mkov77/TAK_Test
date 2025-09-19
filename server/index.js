@@ -95,19 +95,21 @@ app.post('/api/send', async (req, res) => {
 
 // Parse types
 // Endpoint to parse CoTtypes.xml into JSON
+// Parse types
 app.get('/api/types', async (req, res) => {
   try {
     const xml = fs.readFileSync(__dirname + '/CoTtypes.xml', 'utf8');
     const parser = new xml2js.Parser({ explicitArray: true });
     const result = await parser.parseStringPromise(xml);
 
-    // All types are under result.types.cot[]
-    const cotList = result.types.cot;
+    if (!result.types || !result.types.cot) {
+      return res.status(500).json({ error: 'Invalid CoTtypes.xml structure' });
+    }
 
-    const types = cotList.map(t => ({
-      code: t.$.cot,        // e.g. "a-.-G-U-C"
-      label: t.$.full,      // e.g. "Ground/Combat"
-      desc: t.$.desc        // e.g. "COMBAT"
+    const types = result.types.cot.map(t => ({
+      code: t.$.cot || t.$.zot,   // some entries use cot, some use zot
+      label: t.$.full || '',
+      desc: t.$.desc || ''
     }));
 
     res.json(types);
@@ -116,6 +118,7 @@ app.get('/api/types', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
 
 
 app.listen(4000, () => console.log('Node server running on http://localhost:4000'));
